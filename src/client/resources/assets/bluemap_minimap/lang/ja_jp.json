@@ -1,0 +1,18 @@
+{
+  "bluemap_minimap.settings": "BlueMap Minimap 設定",
+  "bluemap_minimap.enabled": "有効: %s",
+  "bluemap_minimap.size": "サイズ: %s px",
+  "bluemap_minimap.position": "表示位置: %s",
+  "bluemap_minimap.zoom": "縮尺: %s ブロック/px",
+  "bluemap_minimap.players": "プレイヤー表示: %s",
+  "bluemap_minimap.names": "名前表示: %s",
+  "bluemap_minimap.done": "完了",
+  "bluemap_minimap.reload": "設定を再読込",
+  "bluemap_minimap.top_right": "右上",
+  "bluemap_minimap.top_left": "左上",
+  "bluemap_minimap.bottom_right": "右下",
+  "bluemap_minimap.bottom_left": "左下",
+  "bluemap_minimap.config_hint": "BlueMap URL: config/bluemap-minimap.json",
+  "bluemap_minimap.current": "現在: %s px | %s | 縮尺 %s | プレイヤー %s | 名前 %s",
+  "bluemap_minimap.status": "状態: %s | map %s | tile %s | queue %s | cache %s"
+}

@@ -1,0 +1,16 @@
+.gradle/
+.gradle-user-home/
+build/
+run/
+.idea/
+.vscode/
+*.iml
+.e2e/
+config/bluemap-minimap.json
+config/bluemap-minimap-cache/
+*.log
+crash-reports/
+screenshots/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*

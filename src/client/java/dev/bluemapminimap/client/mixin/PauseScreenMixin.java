@@ -1,0 +1,24 @@
+package dev.bluemapminimap.client.mixin;
+
+import dev.bluemapminimap.client.BlueMapMinimapClient;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(PauseScreen.class)
+public abstract class PauseScreenMixin extends Screen {
+    protected PauseScreenMixin(Component title) {
+        super(title);
+    }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void bluemapMinimap$addSettingsButton(CallbackInfo ci) {
+        addRenderableWidget(Button.builder(Component.translatable("bluemap_minimap.settings"),
+                button -> BlueMapMinimapClient.openSettings(this)).bounds(width - 128, 8, 120, 20).build());
+    }
+}

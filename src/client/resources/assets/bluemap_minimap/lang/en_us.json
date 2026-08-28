@@ -1,0 +1,18 @@
+{
+  "bluemap_minimap.settings": "BlueMap Minimap",
+  "bluemap_minimap.enabled": "Enabled: %s",
+  "bluemap_minimap.size": "Size: %s px",
+  "bluemap_minimap.position": "Position: %s",
+  "bluemap_minimap.zoom": "Zoom: %s blocks/px",
+  "bluemap_minimap.players": "Show players: %s",
+  "bluemap_minimap.names": "Show names: %s",
+  "bluemap_minimap.done": "Done",
+  "bluemap_minimap.reload": "Reload config",
+  "bluemap_minimap.top_right": "Top right",
+  "bluemap_minimap.top_left": "Top left",
+  "bluemap_minimap.bottom_right": "Bottom right",
+  "bluemap_minimap.bottom_left": "Bottom left",
+  "bluemap_minimap.config_hint": "BlueMap URL: config/bluemap-minimap.json",
+  "bluemap_minimap.current": "Current: %s px | %s | zoom %s | players %s | names %s",
+  "bluemap_minimap.status": "Status: %s | map %s | tile %s | queue %s | cache %s"
+}

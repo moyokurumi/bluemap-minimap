@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "bluemap_minimap",
+  "version": "${version}",
+  "name": "BlueMap Minimap",
+  "description": "A small client-side minimap backed by BlueMap low-resolution tiles.",
+  "authors": ["BlueMap Minimap contributors"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.bluemapminimap.client.BlueMapMinimapClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "bluemap-minimap.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.bluemapminimap.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "HudMixin",
+    "MinecraftMixin",
+    "PauseScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
