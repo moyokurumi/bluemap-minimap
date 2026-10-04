@@ -1,5 +1,21 @@
 # BlueMap Minimap
 
+## Download / ダウンロード
+
+The currently published older trial build is **v0.1.0-rc.1** for Minecraft 26.2.
+
+- [Release page / Releaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.1)
+- [Download the installable JAR](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.1/bluemap-minimap-0.1.0-rc.1.jar)
+- [日本語の導入・手動設定手順](docs/download-ja.md)
+
+Choose `bluemap-minimap-0.1.0-rc.1.jar` under **Assets**, not the sources JAR
+or the source-code archives. RC.1 needs manual server configuration.
+
+RC.3 has passed 107 automated tests in a separate local candidate build, but
+its fresh real-client check and Release publication are still pending.
+The source on this branch and the existing Release remain RC.1.
+[RC.3 candidate status](docs/release-notes/v0.1.0-rc.3.md).
+
 ## Overview
 
 BlueMap Minimap is a lightweight client-side Fabric mod that displays a
