@@ -1,12 +1,18 @@
-# BlueMap Minimap for Moyo の導入（RC.4 配布準備中）
+# BlueMap Minimap for Moyo のダウンロード・導入（RC.4）
 
 > **もよさば専用のクライアントMODです。一般のBlueMap導入サーバーでは使用できません。**
 > もよさばの参加者向け配布です。Fabricクライアントの `mods` に入れるMODで、
 > サーバーに入れるプラグインではありません。他サーバーは対応対象外です。
 
-**このRC.4はまだGitHub Releaseへ公開していません。** 以下は公開後の導入案内です。
-公開されるまではRC.1やDiscord添付RC.3を、この手順で使える版と読み替えないでください。
-[公開済みの旧RC.1の手順](download-ja.md)は別ページに残しています。
+**0.1.0-rc.4を試用版（Pre-release）として公開しました。正式安定版ではありません。**
+自動テストと公開JARのダウンロード・ハッシュ照合は完了しています。
+RC.4の実クライアントでの画面描画やワールド移動の確認は未実施です。
+
+- [GitHub Releaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.4)
+- [導入用JARをダウンロード](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.4/bluemap-minimap-0.1.0-rc.4.jar)
+
+RC.1やDiscord添付RC.3を、この手順で使える版と読み替えないでください。
+[旧RC.1の手順](download-ja.md)は別ページに残しています。
 
 もよサーバーのBlueMapを、画面の隅にミニマップとして表示する自作MODです。
 導入は任意です。BlueMap公式のMODではありません。
@@ -24,9 +30,9 @@ Minecraft 26.3用・Forge用・Bedrock用ではありません。
 ## 入れ方
 
 1. Minecraft 26.2のFabric環境を用意し、Minecraftを終了します。
-2. [GitHub Releases](https://github.com/moyokurumi/bluemap-minimap/releases)で、RC.4の公開を確認します。
+2. [RC.4のReleaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.4)を開きます。
 3. **Assets → `bluemap-minimap-0.1.0-rc.4.jar`** をダウンロードします。
-   `-sources.jar` と `Source code` は導入用ではありません。
+   `Source code` はソースコード用なので、`mods`には入れません。
 4. 使用中のゲームディレクトリの `mods` フォルダーへ入れます。
    旧版のBlueMap Minimapがある場合は、Minecraft終了中に別の保管フォルダーへ移し、同時に入れないでください。
 5. Minecraftを起動して、**`mc.moyokurumi.com`** へ接続します。
@@ -62,6 +68,9 @@ Minecraft 26.3用・Forge用・Bedrock用ではありません。
 通常の新規導入でこの確認は不要です。
 
 ## 検証状況
+
+公開された導入用JARは112,169 bytesです。SHA-256:
+`a820b05f4debc8fd9b7b1fd63a1070ec5f83a463e3a6cacf02781a268424c6f5`
 
 自動テスト・配布ファイルの検査と、実クライアントでの画面確認は別です。
 [RC.4検証記録](release-notes/v0.1.0-rc.4.md)に結果と未確認事項を記載しています。

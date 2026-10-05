@@ -9,17 +9,22 @@
 
 ## Download and release status
 
-This source is the **Moyo-specific RC.4 candidate**, not a published release.
-The only currently published GitHub release is the older
-[v0.1.0-rc.1](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.1).
-RC.3 has also been distributed through the server's Discord.
+**v0.1.0-rc.4 is now available as a prerelease for Moyo participants.**
+It is a trial build, not a stable release. Automated tests and the published JAR's
+download/hash checks passed; real-client acceptance remains unverified.
 
-- [RC.4 Japanese installation guide (pending publication)](docs/download-moyo-ja.md)
+- [RC.4 Release page](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.4)
+- [Download bluemap-minimap-0.1.0-rc.4.jar](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.4/bluemap-minimap-0.1.0-rc.4.jar)
+- [日本語のダウンロード・導入手順](docs/download-moyo-ja.md)
 - [RC.4 validation and remaining checks](docs/release-notes/v0.1.0-rc.4.md)
-- [Published RC.1 instructions](docs/download-ja.md)
 
-The RC.1 binary requires manual configuration. Do not apply the RC.4 zero-configuration
-instructions to it. Previous releases remain available.
+Prepare Minecraft 26.2 / Fabric Loader / Java 25, put this JAR in the client's
+`mods` directory, and join `mc.moyokurumi.com`. A clean installation requires no
+JSON editing. Move an older BlueMap Minimap JAR out of `mods` before installing;
+do not load two versions together. Source-code archives are not installable mods.
+
+Previous releases remain available. [RC.1's archived instructions](docs/download-ja.md)
+describe its older manual configuration and are not the RC.4 installation procedure.
 
 ## Overview
 

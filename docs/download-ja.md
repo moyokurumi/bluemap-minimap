@@ -1,4 +1,4 @@
-# BlueMap Minimap のダウンロード・導入（RC.1）
+# BlueMap Minimap の旧版導入手順（RC.1）
 
 > **もよさば専用のクライアントMODです。一般のBlueMap導入サーバーでは使用できません。**
 > もよさばの参加者向け配布です。Fabricクライアントの `mods` に入れるMODで、
@@ -9,10 +9,11 @@ Minecraftの画面の隅に、サーバーのBlueMap地図と公開中のプレ�
 
 ## ダウンロード
 
-現在ダウンロードできるのは、**旧試用版 0.1.0-rc.1** です。
-DiscordではRC.3が配布されていますが、GitHub Releaseへ公開済みなのはRC.1です。
-JSON編集を不要にするモヨサバ専用RC.4は配布準備中です。
-[RC.4の導入案内・未公開の注意](download-moyo-ja.md)を参照してください。
+**新しく導入する方は、公開済みの試用版RC.4を使ってください。**
+RC.4は初回JSON編集が不要です。[RC.4のダウンロード・導入手順](download-moyo-ja.md)へ進んでください。
+RC.4はPre-releaseであり、正式安定版ではありません。
+
+以下は、引き続き公開している**旧試用版 0.1.0-rc.1**のための保存用手順です。
 
 - [Releaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.1)
 - [導入用JARをダウンロード](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.1/bluemap-minimap-0.1.0-rc.1.jar)
