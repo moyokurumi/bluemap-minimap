@@ -1,13 +1,18 @@
 # BlueMap Minimap のダウンロード・導入（RC.1）
 
+> **もよさば専用のクライアントMODです。一般のBlueMap導入サーバーでは使用できません。**
+> もよさばの参加者向け配布です。Fabricクライアントの `mods` に入れるMODで、
+> サーバーに入れるプラグインではありません。他サーバーは対応対象外です。
+
 Minecraftの画面の隅に、サーバーのBlueMap地図と公開中のプレイヤーを表示するFabric用MODです。
 導入は任意です。BlueMap公式のMODではありません。
 
 ## ダウンロード
 
 現在ダウンロードできるのは、**旧試用版 0.1.0-rc.1** です。
-RC.3候補は自動テスト107件を通過していますが、実クライアント確認とRelease公開は未完了です。
-[RC.3の検証状況](release-notes/v0.1.0-rc.3.md)を参照してください。
+DiscordではRC.3が配布されていますが、GitHub Releaseへ公開済みなのはRC.1です。
+JSON編集を不要にするモヨサバ専用RC.4は配布準備中です。
+[RC.4の導入案内・未公開の注意](download-moyo-ja.md)を参照してください。
 
 - [Releaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.1)
 - [導入用JARをダウンロード](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.1/bluemap-minimap-0.1.0-rc.1.jar)
@@ -30,7 +35,7 @@ Minecraft 26.3向けの配布物ではありません。Fabric API、Xaero、Map
 **RC.1は接続先の手動設定が必要です。** BlueMap URLの自動検出や地図の回転には対応していません。
 開発中の版の説明と混同しないよう、このページは公開済みRC.1の機能に合わせています。
 
-設定例（アドレスとmap IDは参加先の案内に合わせて置き換えてください）：
+もよさば用の設定例：
 
 ```json
 {
@@ -41,8 +46,8 @@ Minecraft 26.3向けの配布物ではありません。Fabric API、Xaero、Map
   "showPlayers": true,
   "showNames": true,
   "servers": {
-    "play.example.com": {
-      "blueMapUrl": "https://map.example.com/",
+    "mc.moyokurumi.com": {
+      "blueMapUrl": "https://mcmap.moyokurumi.com/",
       "dimensions": {
         "minecraft:overworld": "overworld"
       }
@@ -51,9 +56,9 @@ Minecraft 26.3向けの配布物ではありません。Fabric API、Xaero、Map
 }
 ```
 
-`servers` のキーには、マルチプレイ一覧で使うサーバーアドレスを指定します。
+マルチプレイ一覧の接続先は **`mc.moyokurumi.com`** を使ってください。
 既にほかのサーバーを設定している場合は、その設定を残して項目を追加してください。
-BlueMapのURLやmap IDが分からないときは、参加先の運営案内を確認してください。
+地図が表示されない場合は、もよさばの運営へ相談してください。
 
 ## 表示されるもの・制限
 

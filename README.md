@@ -1,5 +1,12 @@
 # BlueMap Minimap
 
+> **もよさば専用のクライアントMODです。一般のBlueMap導入サーバーでは使用できません。**
+> Fabricクライアントの `mods` に入れるMODで、サーバープラグインではありません。
+>
+> **Moyo server only — not a general-purpose BlueMap addon.**
+> This is a Fabric client mod for Moyo participants, not a server plugin.
+> Other Minecraft servers are not supported.
+
 ## Download / ダウンロード
 
 The currently published older trial build is **v0.1.0-rc.1** for Minecraft 26.2.
@@ -11,15 +18,21 @@ The currently published older trial build is **v0.1.0-rc.1** for Minecraft 26.2.
 Choose `bluemap-minimap-0.1.0-rc.1.jar` under **Assets**, not the sources JAR
 or the source-code archives. RC.1 needs manual server configuration.
 
-RC.3 has passed 107 automated tests in a separate local candidate build, but
-its fresh real-client check and Release publication are still pending.
-The source on this branch and the existing Release remain RC.1.
-[RC.3 candidate status](docs/release-notes/v0.1.0-rc.3.md).
+RC.3 has been distributed through Moyo's Discord. The new Moyo-specific RC.4
+candidate has passed 131 automated tests locally, but its real-client acceptance
+and GitHub Release upload are still pending. **RC.4 is not yet available from Releases.**
+The program source on this branch and the existing GitHub Release remain RC.1.
+
+- [RC.4 Japanese installation guide (pending publication)](docs/download-moyo-ja.md)
+- [RC.4 candidate status and checks](docs/release-notes/v0.1.0-rc.4.md)
+
+The technical sections below describe the older RC.1 build. They do not imply
+support for other BlueMap servers or that RC.4 has been published.
 
 ## Overview
 
 BlueMap Minimap is a lightweight client-side Fabric mod that displays a
-server's already-rendered BlueMap as a heads-up-display minimap.
+Moyo server's already-rendered BlueMap as a heads-up-display minimap.
 
 On a Fabric Loader installation, the mod needs only its own JAR. Fabric API,
 Xaero, Map Link, Cloth Config, and Mod Menu are not required. BlueMap Minimap is
@@ -69,10 +82,10 @@ screen controls HUD behavior only.
   "showPlayers": true,
   "showNames": true,
   "servers": {
-    "play.example.com": {
-      "blueMapUrl": "https://map.example.com/",
+    "mc.moyokurumi.com": {
+      "blueMapUrl": "https://mcmap.moyokurumi.com/",
       "dimensions": {
-        "minecraft:overworld": "example-overworld"
+        "minecraft:overworld": "overworld"
       }
     }
   }
