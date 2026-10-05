@@ -7,6 +7,7 @@ import dev.bluemapminimap.client.render.TextureRegistry;
 import dev.bluemapminimap.concurrent.DownloadQueue;
 import dev.bluemapminimap.config.ConfigStore;
 import dev.bluemapminimap.config.MinimapConfig;
+import dev.bluemapminimap.config.MoyoServerPolicy;
 import dev.bluemapminimap.config.ServerProfile;
 import dev.bluemapminimap.model.ClientObservation;
 import dev.bluemapminimap.model.FetchResult;
@@ -14,13 +15,13 @@ import dev.bluemapminimap.model.MapDescriptor;
 import dev.bluemapminimap.model.RemotePlayer;
 import dev.bluemapminimap.model.ResourceValidators;
 import dev.bluemapminimap.model.TileAddress;
+import dev.bluemapminimap.math.TileCoverage;
 import dev.bluemapminimap.net.HttpFailure;
 import dev.bluemapminimap.net.SafeHttpClient;
 import dev.bluemapminimap.net.SseStream;
 import dev.bluemapminimap.protocol.BlueMapJson;
 import dev.bluemapminimap.protocol.BlueMapUris;
 import dev.bluemapminimap.protocol.GlobalSettings;
-import dev.bluemapminimap.protocol.MapSelection;
 import dev.bluemapminimap.protocol.PngHeader;
 import dev.bluemapminimap.protocol.SseParser;
 import dev.bluemapminimap.protocol.TileEvent;
@@ -38,7 +39,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +57,8 @@ public final class BlueMapRuntime implements AutoCloseable {
     private static final int JSON_LIMIT = 1024 * 1024;
     private static final int PNG_LIMIT = 8 * 1024 * 1024;
     private static final long TILE_EVENT_DEBOUNCE_MILLIS = 500L;
+    private static final long CONNECTION_RETRY_NANOS = TimeUnit.SECONDS.toNanos(30);
+    private static final long TILE_RETRY_NANOS = TimeUnit.SECONDS.toNanos(30);
 
     private final Minecraft minecraft;
     private final ConfigStore configStore;
@@ -75,6 +77,8 @@ public final class BlueMapRuntime implements AutoCloseable {
     private volatile ActiveSession session;
     private volatile String desiredKey = "";
     private volatile ClientObservation latestObservation;
+    private volatile long nextConnectionAttemptNanos = Long.MAX_VALUE;
+    private volatile Future<?> connectionRequest;
     private volatile boolean closed;
 
     public BlueMapRuntime(Minecraft minecraft, Path configDirectory) {
@@ -119,18 +123,14 @@ public final class BlueMapRuntime implements AutoCloseable {
     public void tick(ClientObservation observation) {
         if (closed) return;
         latestObservation = observation;
-        if (observation == null || !config.enabled) {
+        if (observation == null || !config.enabled || !MoyoServerPolicy.supports(observation.serverAddress())) {
             if (!desiredKey.isEmpty()) disconnect();
             return;
         }
-        ServerProfile profile = config.profileFor(observation.serverAddress());
-        if (profile == null || profile.blueMapUrl == null || profile.blueMapUrl.isBlank()) {
-            if (!desiredKey.isEmpty()) disconnect();
-            return;
-        }
+        ServerProfile profile = MoyoServerPolicy.profileFor(config, observation.serverAddress());
         String key = MinimapConfig.normalizeServerAddress(observation.serverAddress()) + "|" + observation.dimension()
                 + "|" + Integer.toHexString(profile.blueMapUrl.hashCode());
-        if (!key.equals(desiredKey)) {
+        if (!key.equals(desiredKey) || (session == null && System.nanoTime() >= nextConnectionAttemptNanos)) {
             beginConnection(key, profile, observation);
             return;
         }
@@ -141,11 +141,13 @@ public final class BlueMapRuntime implements AutoCloseable {
     public RuntimeView view() {
         ActiveSession current = session;
         ClientObservation observation = latestObservation;
-        if (current == null || observation == null || current.closed.get()) return RuntimeView.empty(config.copy());
+        if (current == null || observation == null || current.closed.get()
+                || !MoyoServerPolicy.supports(observation.serverAddress())) return RuntimeView.empty(config.copy());
         UUID localUuid = minecraft.player == null ? null : minecraft.player.getUUID();
+        float liveYaw = minecraft.player == null ? observation.yaw() : minecraft.player.getYRot();
         Map<TileAddress, ManagedTexture> tileSnapshot = textures.tileSnapshot();
         Map<UUID, ManagedTexture> headSnapshot = textures.headSnapshot();
-        return new RuntimeView(config.copy(), current.map, observation.x(), observation.z(), observation.yaw(), localUuid,
+        return new RuntimeView(config.copy(), current.map, observation.x(), observation.z(), liveYaw, localUuid,
                 tileSnapshot, headSnapshot, current.players);
     }
 
@@ -162,7 +164,11 @@ public final class BlueMapRuntime implements AutoCloseable {
 
     public void disconnect() {
         desiredKey = "";
+        nextConnectionAttemptNanos = Long.MAX_VALUE;
         generation.incrementAndGet();
+        Future<?> pending = connectionRequest;
+        connectionRequest = null;
+        if (pending != null) pending.cancel(true);
         ActiveSession old = session;
         session = null;
         if (old != null) old.close();
@@ -177,16 +183,19 @@ public final class BlueMapRuntime implements AutoCloseable {
         desiredKey = key;
         long expectedGeneration = generation.get();
         ServerProfile safeProfile = profile.copy();
-        metadataExecutor.execute(() -> initialize(expectedGeneration, key, safeProfile, observation));
+        connectionRequest = metadataExecutor.submit(() -> initialize(expectedGeneration, key, safeProfile, observation));
     }
 
     private void initialize(long expectedGeneration, String key, ServerProfile profile, ClientObservation observation) {
         try {
+            if (!isCurrent(expectedGeneration, key)) return;
+            // Do not contact the web endpoint at all for an unmapped world.
+            if (!profile.dimensions.containsKey(observation.dimension())) return;
             URI base = BlueMapUris.validatedBase(profile.blueMapUrl);
             FetchResult globalResponse = http.get(BlueMapUris.rootSettings(base), JSON_LIMIT, ResourceValidators.NONE, "application/json");
             if (globalResponse.status() != FetchResult.Status.OK) throw new IOException("BlueMap settings are unavailable");
             GlobalSettings global = BlueMapJson.parseGlobalSettings(globalResponse.body());
-            String mapId = MapSelection.choose(observation.dimension(), profile, global.maps());
+            String mapId = MoyoServerPolicy.mapFor(observation.dimension(), profile, global.maps());
             if (mapId == null) {
                 safeError("mapping", "No BlueMap map is configured for the current dimension", null);
                 return;
@@ -199,20 +208,28 @@ public final class BlueMapRuntime implements AutoCloseable {
             int[] layout = BlueMapJson.parseLowresLayout(mapResponse.body());
             MapDescriptor descriptor = new MapDescriptor(mapId, mapRoot, liveRoot, layout[0], layout[1], layout[2], layout[3]);
             if (!isCurrent(expectedGeneration, key)) return;
-            ActiveSession created = new ActiveSession(expectedGeneration, key, base, descriptor);
-            session = created;
-            updateNearbyTiles(created, observation);
-            fetchPlayers(created);
-            sseExecutor.execute(() -> runSse(created));
+            minecraft.execute(() -> {
+                // Session installation and disconnect run on the client thread, so
+                // a late metadata response cannot resurrect a previous world's HUD.
+                if (!isCurrent(expectedGeneration, key)) return;
+                ActiveSession created = new ActiveSession(expectedGeneration, key, base, descriptor);
+                session = created;
+                updateNearbyTiles(created, latestObservation);
+                metadataExecutor.execute(() -> fetchPlayers(created));
+                sseExecutor.execute(() -> runSse(created));
+            });
         } catch (HttpFailure ex) {
             safeError("initialize-" + ex.category(), "BlueMap connection setup failed: " + ex.category(), null);
         } catch (RuntimeException | IOException | InterruptedException ex) {
             if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
             safeError("initialize", "BlueMap connection setup failed", ex);
+        } finally {
+            if (isCurrent(expectedGeneration, key)) nextConnectionAttemptNanos = System.nanoTime() + CONNECTION_RETRY_NANOS;
         }
     }
 
     private void updateNearbyTiles(ActiveSession current, ClientObservation observation) {
+        if (observation == null || !isCurrent(current)) return;
         TileAddress center;
         try {
             center = TileAddress.atWorldPosition(current.map.mapId(), observation.x(), observation.z(),
@@ -220,16 +237,22 @@ public final class BlueMapRuntime implements AutoCloseable {
         } catch (IllegalArgumentException ex) {
             return;
         }
-        if (center.equals(current.centerTile)) return;
-        current.centerTile = center;
+        Set<TileAddress> required;
+        try {
+            required = TileCoverage.requiredTiles(current.map.mapId(), observation.x(), observation.z(),
+                    current.map.tileSizeX(), current.map.tileSizeZ(), config.size, config.zoom, config.mapOrientation);
+        } catch (IllegalArgumentException ex) {
+            return;
+        }
         Set<TileAddress> wanted = current.wantedTiles;
+        long now = System.nanoTime();
+        if (center.equals(current.centerTile) && wanted.equals(required) && now < current.nextTileRefreshNanos) return;
+        current.nextTileRefreshNanos = now + TILE_RETRY_NANOS;
+        current.centerTile = center;
         wanted.clear();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                TileAddress tile = new TileAddress(current.map.mapId(), center.x() + dx, center.z() + dz, 1);
-                wanted.add(tile);
-                requestTile(current, tile, false);
-            }
+        wanted.addAll(required);
+        for (TileAddress tile : required) {
+            requestTile(current, tile, false);
         }
     }
 
@@ -399,6 +422,7 @@ public final class BlueMapRuntime implements AutoCloseable {
         current.requests.removeIf(Future::isDone);
         if (textures.headSnapshot().containsKey(uuid)) return;
         Future<?> request = headDownloads.submitOnce(current.generation + ":head:" + uuid, () -> {
+            if (!isCurrent(current)) return;
             try {
                 FetchResult response = http.get(BlueMapUris.playerHead(current.map.mapRoot(), uuid.toString()),
                         512 * 1024, ResourceValidators.NONE, "image/png");

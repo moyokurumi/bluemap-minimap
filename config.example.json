@@ -5,12 +5,17 @@
   "zoom": 2.0,
   "showPlayers": true,
   "showNames": true,
+  "autoDiscoverBlueMap": true,
+  "mapOrientation": "north_up",
+  "showCompass": true,
+  "showCoordinates": true,
   "servers": {
-    "play.example.com": {
-      "blueMapUrl": "https://map.example.com/",
+    "mc.moyokurumi.com": {
+      "blueMapUrl": "https://mcmap.moyokurumi.com/",
       "dimensions": {
-        "minecraft:overworld": "example-overworld",
-        "minecraft:the_nether": "example-nether"
+        "minecraft:overworld": "overworld",
+        "minecraft:world": "overworld",
+        "minecraft:resource": "resource"
       }
     }
   }

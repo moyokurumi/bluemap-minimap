@@ -46,6 +46,10 @@ public final class ConfigStore {
         config.sanitize();
         Path parent = file.getParent();
         if (parent != null) Files.createDirectories(parent);
+        // Preserve the first pre-upgrade configuration, including malformed JSON.
+        // Never replace a backup left by an earlier save or attempt a destructive migration.
+        Path backup = file.resolveSibling(file.getFileName() + ".pre-rc4.bak");
+        if (Files.exists(file) && !Files.exists(backup)) Files.copy(file, backup);
         Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
         try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
             GSON.toJson(config, writer);

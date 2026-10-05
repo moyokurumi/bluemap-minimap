@@ -29,6 +29,7 @@ final class ActiveSession {
     volatile SseStream sseStream;
     volatile long lastTileUpdateEpochMillis;
     volatile long lastPlayerPollNanos;
+    volatile long nextTileRefreshNanos;
 
     ActiveSession(long generation, String key, URI base, MapDescriptor map) {
         this.generation = generation;

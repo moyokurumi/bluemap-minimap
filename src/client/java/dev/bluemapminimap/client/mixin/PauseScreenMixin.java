@@ -1,6 +1,8 @@
 package dev.bluemapminimap.client.mixin;
 
 import dev.bluemapminimap.client.BlueMapMinimapClient;
+import dev.bluemapminimap.i18n.UiTranslations;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +20,8 @@ public abstract class PauseScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void bluemapMinimap$addSettingsButton(CallbackInfo ci) {
-        addRenderableWidget(Button.builder(Component.translatable("bluemap_minimap.settings"),
+        String language = Minecraft.getInstance().getLanguageManager().getSelected();
+        addRenderableWidget(Button.builder(UiTranslations.component(language, "bluemap_minimap.settings"),
                 button -> BlueMapMinimapClient.openSettings(this)).bounds(width - 128, 8, 120, 20).build());
     }
 }
