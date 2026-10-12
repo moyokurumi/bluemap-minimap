@@ -5,6 +5,7 @@ import dev.bluemapminimap.model.FetchResult;
 import dev.bluemapminimap.model.ResourceValidators;
 import dev.bluemapminimap.net.HttpFailure;
 import dev.bluemapminimap.net.SafeHttpClient;
+import com.google.common.net.InternetDomainName;
 
 import java.net.IDN;
 import java.net.InetAddress;
@@ -30,8 +31,8 @@ public final class BlueMapDiscovery {
     }
 
     /**
-     * Produces HTTPS-only candidates derived from the exact Minecraft host and
-     * its parent domain. No unrelated host or search service is contacted.
+     * Produces bounded candidates for the exact Minecraft host and its domain.
+     * The default HTTP BlueMap port is tried only on the exact connected host.
      */
     public static List<URI> candidates(String serverAddress) {
         String host = extractHost(serverAddress);
@@ -84,10 +85,21 @@ public final class BlueMapDiscovery {
             String parent = labels.length > 2
                     ? String.join(".", java.util.Arrays.copyOfRange(labels, 1, labels.length))
                     : host;
+            // Do not escape a registrable domain (including hosted private suffixes).
+            try {
+                InternetDomainName name = InternetDomainName.from(host);
+                if (!name.isUnderPublicSuffix()
+                        || !InternetDomainName.from(parent).isUnderPublicSuffix()) parent = host;
+            } catch (IllegalArgumentException ex) {
+                parent = host;
+            }
             candidates.add(https("mcmap." + parent, "/"));
             candidates.add(https("map." + parent, "/"));
             candidates.add(https("bluemap." + parent, "/"));
         }
+
+        candidates.add(http(host, 8100, "/"));
+        candidates.add(http(host, 8100, "/bluemap/"));
 
         return candidates.stream().limit(MAX_CANDIDATES).toList();
     }
@@ -158,11 +170,51 @@ public final class BlueMapDiscovery {
                 if (mapResponse.status() != FetchResult.Status.OK || !isJson(mapResponse.contentType())) continue;
                 BlueMapJson.parseLowresLayout(mapResponse.body());
                 return Optional.of(new Result(BlueMapUris.validatedBase(candidate.toString()), mapId));
-            } catch (HttpFailure | IllegalArgumentException ignored) {
+            } catch (HttpFailure | RuntimeException ignored) {
                 // A failed candidate is expected. Continue through the bounded same-domain list.
             }
         }
         return Optional.empty();
+    }
+
+    /** Discovers the endpoint independently of world selection, so unusual map IDs can be configured. */
+    public static Optional<Catalog> discoverCatalog(SafeHttpClient http, List<URI> candidates)
+            throws InterruptedException {
+        for (URI candidate : candidates.stream().limit(MAX_CANDIDATES).toList()) {
+            try {
+                return Optional.of(readCatalog(http, candidate));
+            } catch (HttpFailure | RuntimeException ignored) {
+                // Failed probes are normal; never log URLs or server responses.
+            }
+        }
+        return Optional.empty();
+    }
+
+    public static Catalog readCatalog(SafeHttpClient http, URI base) throws HttpFailure, InterruptedException {
+        base = BlueMapUris.validatedBase(base.toString());
+        FetchResult response = http.get(BlueMapUris.rootSettings(base), JSON_LIMIT,
+                ResourceValidators.NONE, "application/json");
+        if (response.status() != FetchResult.Status.OK || !isJson(response.contentType())) {
+            throw new IllegalArgumentException("BlueMap settings unavailable");
+        }
+        GlobalSettings global = BlueMapJson.parseGlobalSettings(response.body());
+        List<String> maps = global.maps().stream().distinct().limit(128).toList();
+        for (String map : maps) BlueMapUris.mapRoot(base, global.mapDataRoot(), map);
+        // Confirm that the endpoint really serves usable BlueMap low-resolution metadata.
+        for (String map : maps.stream().limit(8).toList()) {
+            FetchResult settings = http.get(BlueMapUris.mapSettings(base, global.mapDataRoot(), map),
+                    JSON_LIMIT, ResourceValidators.NONE, "application/json");
+            if (settings.status() != FetchResult.Status.OK || !isJson(settings.contentType())) continue;
+            try {
+                BlueMapJson.parseLowresLayout(settings.body());
+                return new Catalog(base, maps);
+            } catch (RuntimeException ignored) { }
+        }
+        throw new IllegalArgumentException("No supported BlueMap maps found");
+    }
+
+    public record Catalog(URI base, List<String> maps) {
+        public Catalog { maps = List.copyOf(maps); }
     }
 
     private static String extractHost(String serverAddress) {
@@ -174,7 +226,11 @@ public final class BlueMapDiscovery {
         if (firstColon >= 0) {
             if (firstColon != lastColon) return null;
             String port = value.substring(lastColon + 1);
-            if (!port.chars().allMatch(Character::isDigit)) return null;
+            if (port.isEmpty() || !port.chars().allMatch(Character::isDigit)) return null;
+            try {
+                int number = Integer.parseInt(port);
+                if (number < 1 || number > 65535) return null;
+            } catch (NumberFormatException ex) { return null; }
             value = value.substring(0, lastColon);
         }
         while (value.endsWith(".")) value = value.substring(0, value.length() - 1);

@@ -47,13 +47,18 @@ public final class BlueMapUris {
     }
 
     public static URI validatedBase(String raw) {
-        URI uri = directory(URI.create(raw.strip()));
+        URI rawUri = URI.create(raw.strip());
+        if (rawUri.getQuery() != null || rawUri.getFragment() != null) {
+            throw new IllegalArgumentException("Use the BlueMap root URL without query or fragment");
+        }
+        URI uri = directory(rawUri);
         String scheme = uri.getScheme();
         if (scheme == null || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))) {
             throw new IllegalArgumentException("BlueMap URL must use HTTPS or HTTP");
         }
         if (uri.getUserInfo() != null) throw new IllegalArgumentException("BlueMap URL must not contain user information");
         if (uri.getHost() == null) throw new IllegalArgumentException("BlueMap URL must contain a host");
+        if (uri.getPort() == 0 || uri.getPort() > 65535) throw new IllegalArgumentException("Invalid BlueMap port");
         return uri;
     }
 

@@ -103,6 +103,25 @@ class SafeHttpClientTest {
         assertEquals(HttpFailure.Category.UNSUPPORTED_CONTENT, failure.category());
     }
 
+    @Test
+    void bodyThatStallsAfterHeadersCannotBlockDiscoveryForever() throws Exception {
+        server.createContext("/stalled", exchange -> {
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, 0);
+            exchange.getResponseBody().write('{');
+            exchange.getResponseBody().flush();
+            try { Thread.sleep(700); }
+            catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+            finally { exchange.close(); }
+        });
+        try (SafeHttpClient bounded = new SafeHttpClient(Duration.ofSeconds(1), Duration.ofMillis(150))) {
+            HttpFailure failure = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                    assertThrows(HttpFailure.class, () -> bounded.get(root.resolve("stalled"), 1024,
+                            ResourceValidators.NONE, "application/json")));
+            assertEquals(HttpFailure.Category.TIMEOUT, failure.category());
+        }
+    }
+
     private static void respond(HttpExchange exchange, int status, String contentType, byte[] body) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(status, body.length);

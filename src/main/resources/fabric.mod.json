@@ -2,14 +2,18 @@
   "schemaVersion": 1,
   "id": "bluemap_minimap",
   "version": "${version}",
-  "name": "BlueMap Minimap for Moyo",
-  "description": "A client-side BlueMap minimap with built-in settings for the Moyo server.",
+  "name": "BlueMap Minimap",
+  "description": "A client-side minimap using your server's public BlueMap, with automatic discovery and in-game setup.",
   "authors": ["BlueMap Minimap contributors"],
   "license": "MIT",
+  "icon": "assets/bluemap_minimap/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
       "dev.bluemapminimap.client.BlueMapMinimapClient"
+    ],
+    "modmenu": [
+      "dev.bluemapminimap.client.integration.BlueMapMinimapModMenu"
     ]
   },
   "mixins": [
@@ -19,8 +23,8 @@
     }
   ],
   "depends": {
-    "fabricloader": ">=0.19.3",
-    "minecraft": "~26.2",
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
     "java": ">=25"
   }
 }

@@ -14,12 +14,21 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class SafeHttpClient implements AutoCloseable {
     public static final String USER_AGENT = "BlueMapMinimap/0.1";
 
     private final HttpClient client;
     private final Duration requestTimeout;
+    private final ScheduledExecutorService bodyTimeouts = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "BlueMap-Minimap-HTTP-Timeout");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public SafeHttpClient() {
         this(Duration.ofSeconds(5), Duration.ofSeconds(10));
@@ -96,12 +105,24 @@ public final class SafeHttpClient implements AutoCloseable {
                 // The bounded stream read remains authoritative.
             }
         }
+        // ofInputStream completes once headers arrive. Bound body reads as well, so
+        // an unknown discovery endpoint cannot monopolize the metadata worker.
+        AtomicBoolean timedOut = new AtomicBoolean();
+        var deadline = bodyTimeouts.schedule(() -> {
+            timedOut.set(true);
+            closeQuietly(response.body());
+        }, requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
         try (InputStream input = response.body()) {
-            return new FetchResult(FetchResult.Status.OK, readBounded(input, maxBytes), received, contentType);
+            byte[] bytes = readBounded(input, maxBytes);
+            if (timedOut.get()) throw new HttpFailure(HttpFailure.Category.TIMEOUT, "HTTP body timed out");
+            return new FetchResult(FetchResult.Status.OK, bytes, received, contentType);
         } catch (HttpFailure ex) {
             throw ex;
         } catch (IOException ex) {
+            if (timedOut.get()) throw new HttpFailure(HttpFailure.Category.TIMEOUT, "HTTP body timed out", status, ex);
             throw new HttpFailure(HttpFailure.Category.IO, "Failed while reading an HTTP response", status, ex);
+        } finally {
+            deadline.cancel(false);
         }
     }
 
@@ -194,5 +215,6 @@ public final class SafeHttpClient implements AutoCloseable {
     @Override
     public void close() {
         client.close();
+        bodyTimeouts.shutdownNow();
     }
 }

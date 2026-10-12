@@ -41,7 +41,10 @@ public final class MinimapSettingsScreen extends Screen {
             edited.enabled = !edited.enabled;
             runtime.previewConfig(edited);
             button.setMessage(enabledText());
-        }).bounds(left, y, panelWidth, 20).build(), "bluemap_minimap.tooltip.enabled");
+        }).bounds(left, y, halfWidth, 20).build(), "bluemap_minimap.tooltip.enabled");
+        addButton(Button.builder(text("bluemap_minimap.server_settings"), button ->
+                minecraft.gui.setScreen(new ServerSettingsScreen(this, runtime, edited)))
+                .bounds(left + halfWidth + gap, y, halfWidth, 20).build(), "bluemap_minimap.tooltip.server_settings");
         y += 22;
         addButton(Button.builder(sizeText(), button -> {
             edited.size = nextInt(MinimapConfig.SIZE_OPTIONS, edited.size);
@@ -107,7 +110,8 @@ public final class MinimapSettingsScreen extends Screen {
                 text(positionKey(edited.position)),
                 text(orientationKey(edited.mapOrientation))), width / 2, 42, 0xFFFFFFFF);
         ConnectionStatus status = runtime.status();
-        graphics.centeredText(font, text("bluemap_minimap.status", status.mode(), status.mapId(),
+        String statusKey = "bluemap_minimap.state." + status.mode();
+        graphics.centeredText(font, text("bluemap_minimap.status", UiTranslations.contains(statusKey) ? text(statusKey) : status.mode(), status.mapId(),
                 status.tile(), status.queuedDownloads(), status.cachedTiles()), width / 2, height - 18, 0xFFB7C3D0);
     }
 

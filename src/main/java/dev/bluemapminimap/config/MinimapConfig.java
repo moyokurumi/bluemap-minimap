@@ -20,10 +20,6 @@ public final class MinimapConfig {
     public boolean showCoordinates = true;
     public Map<String, ServerProfile> servers = new LinkedHashMap<>();
 
-    public MinimapConfig() {
-        servers.put(MoyoServerPolicy.SERVER, MoyoServerPolicy.defaults());
-    }
-
     public void sanitize() {
         size = Math.max(SIZE_OPTIONS.getFirst(), Math.min(256, size));
         zoom = Math.max(0.5, Math.min(8.0, zoom));

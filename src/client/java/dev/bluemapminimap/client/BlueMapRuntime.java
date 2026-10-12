@@ -7,7 +7,6 @@ import dev.bluemapminimap.client.render.TextureRegistry;
 import dev.bluemapminimap.concurrent.DownloadQueue;
 import dev.bluemapminimap.config.ConfigStore;
 import dev.bluemapminimap.config.MinimapConfig;
-import dev.bluemapminimap.config.MoyoServerPolicy;
 import dev.bluemapminimap.config.ServerProfile;
 import dev.bluemapminimap.model.ClientObservation;
 import dev.bluemapminimap.model.FetchResult;
@@ -20,6 +19,8 @@ import dev.bluemapminimap.net.HttpFailure;
 import dev.bluemapminimap.net.SafeHttpClient;
 import dev.bluemapminimap.net.SseStream;
 import dev.bluemapminimap.protocol.BlueMapJson;
+import dev.bluemapminimap.protocol.BlueMapDiscovery;
+import dev.bluemapminimap.protocol.MapSelection;
 import dev.bluemapminimap.protocol.BlueMapUris;
 import dev.bluemapminimap.protocol.GlobalSettings;
 import dev.bluemapminimap.protocol.PngHeader;
@@ -49,6 +50,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -65,6 +67,7 @@ public final class BlueMapRuntime implements AutoCloseable {
     private final DiskTileCache diskCache;
     private final TextureRegistry textures;
     private final SafeHttpClient http = new SafeHttpClient();
+    private final SafeHttpClient discoveryHttp = new SafeHttpClient(Duration.ofSeconds(2), Duration.ofSeconds(3));
     private final DownloadQueue tileDownloads = new DownloadQueue(2, 64);
     private final DownloadQueue headDownloads = new DownloadQueue(2, 32);
     private final ExecutorService metadataExecutor = Executors.newSingleThreadExecutor(task -> daemon(task, "BlueMap-Minimap-Metadata"));
@@ -80,6 +83,10 @@ public final class BlueMapRuntime implements AutoCloseable {
     private volatile long nextConnectionAttemptNanos = Long.MAX_VALUE;
     private volatile Future<?> connectionRequest;
     private volatile boolean closed;
+    private volatile String connectionMode = "inactive";
+    private volatile DiscoveredEndpoint discovered;
+
+    private record DiscoveredEndpoint(String server, BlueMapDiscovery.Catalog catalog) { }
 
     public BlueMapRuntime(Minecraft minecraft, Path configDirectory) {
         this.minecraft = minecraft;
@@ -92,6 +99,25 @@ public final class BlueMapRuntime implements AutoCloseable {
 
     public MinimapConfig config() {
         return config;
+    }
+
+    public ClientObservation observation() { return latestObservation; }
+
+    public BlueMapDiscovery.Catalog discoveredFor(String address) {
+        DiscoveredEndpoint found = discovered;
+        return found != null && found.server().equals(MinimapConfig.normalizeServerAddress(address))
+                ? found.catalog() : null;
+    }
+
+    public CompletableFuture<BlueMapDiscovery.Catalog> inspectEndpoint(String url) {
+        URI base = BlueMapUris.validatedBase(url);
+        return CompletableFuture.supplyAsync(() -> {
+            try { return BlueMapDiscovery.readCatalog(discoveryHttp, base); }
+            catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new java.util.concurrent.CompletionException(ex);
+            } catch (HttpFailure ex) { throw new java.util.concurrent.CompletionException(ex); }
+        }, metadataExecutor);
     }
 
     /**
@@ -123,11 +149,17 @@ public final class BlueMapRuntime implements AutoCloseable {
     public void tick(ClientObservation observation) {
         if (closed) return;
         latestObservation = observation;
-        if (observation == null || !config.enabled || !MoyoServerPolicy.supports(observation.serverAddress())) {
+        if (observation == null || !config.enabled) {
             if (!desiredKey.isEmpty()) disconnect();
             return;
         }
-        ServerProfile profile = MoyoServerPolicy.profileFor(config, observation.serverAddress());
+        ServerProfile profile = config.profileFor(observation.serverAddress());
+        if (profile == null) profile = new ServerProfile();
+        if (profile.blueMapUrl.isBlank() && !config.autoDiscoverBlueMap) {
+            if (!desiredKey.isEmpty()) disconnect();
+            connectionMode = "needs_setup";
+            return;
+        }
         String key = MinimapConfig.normalizeServerAddress(observation.serverAddress()) + "|" + observation.dimension()
                 + "|" + Integer.toHexString(profile.blueMapUrl.hashCode());
         if (!key.equals(desiredKey) || (session == null && System.nanoTime() >= nextConnectionAttemptNanos)) {
@@ -141,8 +173,7 @@ public final class BlueMapRuntime implements AutoCloseable {
     public RuntimeView view() {
         ActiveSession current = session;
         ClientObservation observation = latestObservation;
-        if (current == null || observation == null || current.closed.get()
-                || !MoyoServerPolicy.supports(observation.serverAddress())) return RuntimeView.empty(config.copy());
+        if (current == null || observation == null || current.closed.get() || !config.enabled) return RuntimeView.empty(config.copy());
         UUID localUuid = minecraft.player == null ? null : minecraft.player.getUUID();
         float liveYaw = minecraft.player == null ? observation.yaw() : minecraft.player.getYRot();
         Map<TileAddress, ManagedTexture> tileSnapshot = textures.tileSnapshot();
@@ -153,7 +184,7 @@ public final class BlueMapRuntime implements AutoCloseable {
 
     public ConnectionStatus status() {
         ActiveSession current = session;
-        if (current == null) return ConnectionStatus.inactive();
+        if (current == null) return new ConnectionStatus(connectionMode, "-", "-", 0, 0, 0, 0);
         TileAddress center = current.centerTile;
         return new ConnectionStatus(
                 current.sseConnected.get() ? "sse" : "polling",
@@ -164,6 +195,7 @@ public final class BlueMapRuntime implements AutoCloseable {
 
     public void disconnect() {
         desiredKey = "";
+        connectionMode = "inactive";
         nextConnectionAttemptNanos = Long.MAX_VALUE;
         generation.incrementAndGet();
         Future<?> pending = connectionRequest;
@@ -181,6 +213,7 @@ public final class BlueMapRuntime implements AutoCloseable {
     private void beginConnection(String key, ServerProfile profile, ClientObservation observation) {
         disconnect();
         desiredKey = key;
+        connectionMode = "connecting";
         long expectedGeneration = generation.get();
         ServerProfile safeProfile = profile.copy();
         connectionRequest = metadataExecutor.submit(() -> initialize(expectedGeneration, key, safeProfile, observation));
@@ -189,15 +222,32 @@ public final class BlueMapRuntime implements AutoCloseable {
     private void initialize(long expectedGeneration, String key, ServerProfile profile, ClientObservation observation) {
         try {
             if (!isCurrent(expectedGeneration, key)) return;
-            // Do not contact the web endpoint at all for an unmapped world.
-            if (!profile.dimensions.containsKey(observation.dimension())) return;
+            if (profile.blueMapUrl.isBlank()) {
+                BlueMapDiscovery.Catalog catalog = discoveredFor(observation.serverAddress());
+                if (catalog == null) {
+                    Optional<BlueMapDiscovery.Catalog> found = BlueMapDiscovery.discoverCatalog(discoveryHttp,
+                            BlueMapDiscovery.candidates(observation.serverAddress()));
+                    if (!isCurrent(expectedGeneration, key)) return;
+                    if (found.isEmpty()) {
+                        connectionMode = "needs_setup";
+                        return;
+                    }
+                    catalog = found.get();
+                }
+                profile.blueMapUrl = catalog.base().toString();
+                BlueMapDiscovery.Catalog foundCatalog = catalog;
+                minecraft.execute(() -> {
+                    if (isCurrent(expectedGeneration, key)) discovered = new DiscoveredEndpoint(
+                            MinimapConfig.normalizeServerAddress(observation.serverAddress()), foundCatalog);
+                });
+            }
             URI base = BlueMapUris.validatedBase(profile.blueMapUrl);
             FetchResult globalResponse = http.get(BlueMapUris.rootSettings(base), JSON_LIMIT, ResourceValidators.NONE, "application/json");
             if (globalResponse.status() != FetchResult.Status.OK) throw new IOException("BlueMap settings are unavailable");
             GlobalSettings global = BlueMapJson.parseGlobalSettings(globalResponse.body());
-            String mapId = MoyoServerPolicy.mapFor(observation.dimension(), profile, global.maps());
+            String mapId = MapSelection.choose(observation.dimension(), profile, global.maps());
             if (mapId == null) {
-                safeError("mapping", "No BlueMap map is configured for the current dimension", null);
+                if (isCurrent(expectedGeneration, key)) connectionMode = "choose_map";
                 return;
             }
             URI mapRoot = BlueMapUris.mapRoot(base, global.mapDataRoot(), mapId);
@@ -219,8 +269,10 @@ public final class BlueMapRuntime implements AutoCloseable {
                 sseExecutor.execute(() -> runSse(created));
             });
         } catch (HttpFailure ex) {
+            if (isCurrent(expectedGeneration, key)) connectionMode = "unavailable";
             safeError("initialize-" + ex.category(), "BlueMap connection setup failed: " + ex.category(), null);
         } catch (RuntimeException | IOException | InterruptedException ex) {
+            if (isCurrent(expectedGeneration, key)) connectionMode = "unavailable";
             if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
             safeError("initialize", "BlueMap connection setup failed", ex);
         } finally {
@@ -506,5 +558,6 @@ public final class BlueMapRuntime implements AutoCloseable {
         tileDownloads.close();
         headDownloads.close();
         http.close();
+        discoveryHttp.close();
     }
 }

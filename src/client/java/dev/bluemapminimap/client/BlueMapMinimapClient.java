@@ -3,7 +3,6 @@ package dev.bluemapminimap.client;
 import dev.bluemapminimap.client.render.MinimapHudRenderer;
 import dev.bluemapminimap.client.screen.MinimapSettingsScreen;
 import dev.bluemapminimap.model.ClientObservation;
-import dev.bluemapminimap.config.MoyoServerPolicy;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -44,14 +43,18 @@ public final class BlueMapMinimapClient implements ClientModInitializer {
 
     public static void render(GuiGraphicsExtractor graphics) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (observedLevel != minecraft.level || minecraft.getCurrentServer() == null
-                || !MoyoServerPolicy.supports(minecraft.getCurrentServer().ip)) return;
+        if (observedLevel != minecraft.level || minecraft.getCurrentServer() == null) return;
         if (runtime != null && renderer != null) renderer.render(graphics, runtime.view());
     }
 
     public static void openSettings(Screen parent) {
         if (runtime == null) return;
-        Minecraft.getInstance().gui.setScreen(new MinimapSettingsScreen(parent, runtime));
+        Minecraft.getInstance().gui.setScreen(createSettingsScreen(parent));
+    }
+
+    /** Creates a fresh screen without navigating, as required by Mod Menu's factory. */
+    public static Screen createSettingsScreen(Screen parent) {
+        return runtime == null ? parent : new MinimapSettingsScreen(parent, runtime);
     }
 
     public static ConnectionStatus status() {

@@ -9,14 +9,5 @@
   "mapOrientation": "north_up",
   "showCompass": true,
   "showCoordinates": true,
-  "servers": {
-    "mc.moyokurumi.com": {
-      "blueMapUrl": "https://mcmap.moyokurumi.com/",
-      "dimensions": {
-        "minecraft:overworld": "overworld",
-        "minecraft:world": "overworld",
-        "minecraft:resource": "resource"
-      }
-    }
-  }
+  "servers": {}
 }

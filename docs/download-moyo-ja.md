@@ -1,76 +1,12 @@
-# BlueMap Minimap for Moyo のダウンロード・導入（RC.4）
+# BlueMap Minimap の導入手順
 
-> **もよさば専用のクライアントMODです。一般のBlueMap導入サーバーでは使用できません。**
-> もよさばの参加者向け配布です。Fabricクライアントの `mods` に入れるMODで、
-> サーバーに入れるプラグインではありません。他サーバーは対応対象外です。
+Minecraft **26.3**では、汎用版RC.7の[ダウンロード・設定手順](setup-ja.md)を使ってください。
 
-**0.1.0-rc.4を試用版（Pre-release）として公開しました。正式安定版ではありません。**
-自動テストと公開JARのダウンロード・ハッシュ照合は完了しています。
-RC.4の実クライアントでの画面描画やワールド移動の確認は未実施です。
+- [RC.7リリースページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.7)
+- [導入用JAR](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.7/bluemap-minimap-0.1.0-rc.7.jar)
 
-- [GitHub Releaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.4)
-- [導入用JARをダウンロード](https://github.com/moyokurumi/bluemap-minimap/releases/download/v0.1.0-rc.4/bluemap-minimap-0.1.0-rc.4.jar)
+Minecraftを終了し、旧JARを退避してから新しいJARを入れます。既存の設定は残してください。
+自動検出で地図が見つからない場合は、ゲーム内の「サーバー設定」で公開BlueMapのURLと地図を選択します。
 
-RC.1やDiscord添付RC.3を、この手順で使える版と読み替えないでください。
-[旧RC.1の手順](download-ja.md)は別ページに残しています。
-
-もよサーバーのBlueMapを、画面の隅にミニマップとして表示する自作MODです。
-導入は任意です。BlueMap公式のMODではありません。
-
-## 必要なもの
-
-- Minecraft **Java Edition 26.2**
-- **Java 25**
-- **Fabric Loader 0.19.3以上（検証は0.19.3）**
-- 導入用の `bluemap-minimap-0.1.0-rc.4.jar`
-
-Fabric API、Xaero、Map Link、Mod Menu、Cloth Configは不要です。
-Minecraft 26.3用・Forge用・Bedrock用ではありません。
-
-## 入れ方
-
-1. Minecraft 26.2のFabric環境を用意し、Minecraftを終了します。
-2. [RC.4のReleaseページ](https://github.com/moyokurumi/bluemap-minimap/releases/tag/v0.1.0-rc.4)を開きます。
-3. **Assets → `bluemap-minimap-0.1.0-rc.4.jar`** をダウンロードします。
-   `Source code` はソースコード用なので、`mods`には入れません。
-4. 使用中のゲームディレクトリの `mods` フォルダーへ入れます。
-   旧版のBlueMap Minimapがある場合は、Minecraft終了中に別の保管フォルダーへ移し、同時に入れないでください。
-5. Minecraftを起動して、**`mc.moyokurumi.com`** へ接続します。
-
-**初回にJSONを編集する必要はありません。** モヨサバの公開BlueMap設定が組み込まれています。
-表示位置・サイズ・ズーム・地図の回転などは、**Esc → BlueMap Minimap設定**で変更できます。
-ほかのサーバーやシングルプレイでは、この配布版の地図表示・通信は動作しません。
-
-## 表示と接続について
-
-- 生活ワールドと資源ワールドの地図を切り替える設定を内蔵しています。
-  未対応のワールドや公開されていない地図では非表示になります。
-- 地形、自分の向き、同じ地図で公開されているプレイヤーの顔・名前を表示します。
-- 北が上の表示と、自分の向きに合わせた回転を選べます。サイズは40〜100pxから選べます。
-- 建築などの変化は、BlueMapが地図を更新したあとに反映されます。
-- 接続先は公開Webマップ `https://mcmap.moyokurumi.com/` です。Webマップへの通信が必要です。
-- 接続できないときもMinecraftはそのまま遊べます。初期接続と周囲のタイル取得は30秒間隔で再試行します。
-  同じ地図で取得済みのタイルは利用できますが、起動直後に地図情報を取得できない場合は非表示です。
-- ピン、洞窟、Mob、死亡地点、全画面マップの表示はありません。
-
-## 旧版から更新する場合
-
-既存の表示設定と独自設定は維持します。モヨサバの設定がない・URLが空の場合は、
-標準設定をメモリ上で補います。公開BlueMap URLを使う旧設定には、不足するワールド対応だけを補います。
-独自URLや明示済みの地図指定を自動で置き換えることはありません。
-
-設定画面で保存すると、保存前のJSONを一度だけ
-`config/bluemap-minimap.json.pre-rc4.bak` に残します。既存の退避ファイルは上書きしません。
-設定ファイルが壊れている場合は標準設定で動作し、設定画面で保存するまで元ファイルを変更しません。
-
-以前に独自URLや独自の地図対応を指定した人は、その設定が優先されます。
-古い独自設定で地図が出ない場合は、元のJSONを保管したうえで運営へ相談してください。
-通常の新規導入でこの確認は不要です。
-
-## 検証状況
-
-公開された導入用JARは112,169 bytesです。SHA-256:
-`a820b05f4debc8fd9b7b1fd63a1070ec5f83a463e3a6cacf02781a268424c6f5`
-
-自動テスト・配布ファイルの検査と、実クライアントでの画面確認は別です。
-[RC.4検証記録](release-notes/v0.1.0-rc.4.md)に結果と未確認事項を記載しています。
+Minecraft 26.2を使う場合の[旧RC.4手順はこちら](https://github.com/moyokurumi/bluemap-minimap/blob/v0.1.0-rc.4/docs/download-moyo-ja.md)です。
+旧版リリースは引き続き利用できます。
